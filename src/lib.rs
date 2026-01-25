@@ -125,6 +125,8 @@ pub enum CommandResult {
     Message(String),
     /// An error occurred
     Error(String),
+    /// Show help text (optionally with an error message prefix)
+    ShowHelp(Option<String>),
 }
 
 // ============================================================================
@@ -145,6 +147,46 @@ pub fn read_request_from_stdin() -> anyhow::Result<PluginRequest> {
     std::io::stdin().read_to_string(&mut input)?;
     let request: PluginRequest = serde_json::from_str(&input)?;
     Ok(request)
+}
+
+/// Write plugin help text to a writer.
+fn write_plugin_help(info: &PluginInfo, w: &mut dyn std::io::Write) {
+    if let Some(help) = &info.help {
+        let _ = writeln!(w, "{}", help.usage);
+        let _ = writeln!(w);
+        if !help.commands.is_empty() {
+            let _ = writeln!(w, "Commands:");
+            for (cmd, desc) in &help.commands {
+                let _ = writeln!(w, "  {:<20} {}", cmd, desc);
+            }
+            let _ = writeln!(w);
+        }
+        if !help.examples.is_empty() {
+            let _ = writeln!(w, "Examples:");
+            for ex in &help.examples {
+                let _ = writeln!(w, "  {}", ex);
+            }
+            let _ = writeln!(w);
+        }
+        if let Some(note) = &help.note {
+            let _ = writeln!(w, "{}", note);
+        }
+    } else {
+        let _ = writeln!(w, "meta {} v{}", info.name, info.version);
+        if let Some(desc) = &info.description {
+            let _ = writeln!(w, "{}", desc);
+        }
+    }
+}
+
+/// Print plugin help text to stdout.
+fn print_plugin_help(info: &PluginInfo) {
+    write_plugin_help(info, &mut std::io::stdout());
+}
+
+/// Print plugin help text to stderr (for error cases where meta captures stdout).
+fn eprint_plugin_help(info: &PluginInfo) {
+    write_plugin_help(info, &mut std::io::stderr());
 }
 
 // ============================================================================
@@ -197,35 +239,21 @@ pub fn run_plugin(plugin: PluginDefinition) {
                     eprintln!("Error: {}", e);
                     std::process::exit(1);
                 }
+                CommandResult::ShowHelp(maybe_error) => {
+                    if let Some(ref err) = maybe_error {
+                        eprintln!("error: {}", err);
+                        eprintln!();
+                        // Print help to stderr when there's an error (so it's visible even if meta captures stdout)
+                        eprint_plugin_help(&plugin.info);
+                        std::process::exit(1);
+                    } else {
+                        print_plugin_help(&plugin.info);
+                    }
+                }
             }
         }
         "--help" | "-h" => {
-            if let Some(help) = &plugin.info.help {
-                println!("{}", help.usage);
-                println!();
-                if !help.commands.is_empty() {
-                    println!("Commands:");
-                    for (cmd, desc) in &help.commands {
-                        println!("  {:<20} {}", cmd, desc);
-                    }
-                    println!();
-                }
-                if !help.examples.is_empty() {
-                    println!("Examples:");
-                    for ex in &help.examples {
-                        println!("  {}", ex);
-                    }
-                    println!();
-                }
-                if let Some(note) = &help.note {
-                    println!("{}", note);
-                }
-            } else {
-                println!("meta {} v{}", plugin.info.name, plugin.info.version);
-                if let Some(desc) = &plugin.info.description {
-                    println!("{}", desc);
-                }
-            }
+            print_plugin_help(&plugin.info);
         }
         _ => {
             eprintln!("Unknown flag: {}. This binary is a meta plugin.", args[1]);
