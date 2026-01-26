@@ -105,6 +105,9 @@ pub struct PlannedCommand {
     pub dir: String,
     /// Command to execute
     pub cmd: String,
+    /// Environment variables to set for this command's subprocess
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub env: Option<HashMap<String, String>>,
 }
 
 /// Wrapper for the execution plan response (the JSON envelope plugins emit).
