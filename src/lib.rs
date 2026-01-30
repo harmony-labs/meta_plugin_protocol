@@ -111,6 +111,13 @@ pub struct ExecutionPlan {
     /// Whether to run main commands in parallel (overrides CLI --parallel if set)
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub parallel: Option<bool>,
+
+    /// Maximum number of commands to run in parallel (pool size limit).
+    /// Use to limit concurrency for operations with shared resources (e.g., SSH
+    /// ControlMaster has a default session limit of 10). When set, loop_lib will
+    /// run at most this many commands simultaneously.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub max_parallel: Option<usize>,
 }
 
 /// A single command to be executed by the host via loop_lib.
@@ -155,7 +162,7 @@ pub enum CommandResult {
 
 /// Serialize and print an execution plan to stdout.
 pub fn output_execution_plan(commands: Vec<PlannedCommand>, parallel: Option<bool>) {
-    output_execution_plan_full(vec![], commands, vec![], parallel);
+    output_execution_plan_full(vec![], commands, vec![], parallel, None);
 }
 
 /// Serialize and print a full execution plan with pre/post commands to stdout.
@@ -164,6 +171,7 @@ pub fn output_execution_plan_full(
     commands: Vec<PlannedCommand>,
     post_commands: Vec<PlannedCommand>,
     parallel: Option<bool>,
+    max_parallel: Option<usize>,
 ) {
     let response = PlanResponse {
         plan: ExecutionPlan {
@@ -171,6 +179,7 @@ pub fn output_execution_plan_full(
             commands,
             post_commands,
             parallel,
+            max_parallel,
         },
     };
     println!("{}", serde_json::to_string(&response).unwrap());
