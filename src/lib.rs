@@ -83,6 +83,9 @@ pub struct PluginRequestOptions {
     pub include_filters: Option<Vec<String>>,
     #[serde(default)]
     pub exclude_filters: Option<Vec<String>>,
+    /// Convert warnings to errors for all-or-nothing behavior (CI/automation)
+    #[serde(default)]
+    pub strict: bool,
 }
 
 // ============================================================================
