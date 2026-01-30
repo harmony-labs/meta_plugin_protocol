@@ -95,8 +95,20 @@ pub struct PluginRequestOptions {
 /// An execution plan returned by a plugin, containing commands for the host to execute.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ExecutionPlan {
+    /// Commands to run BEFORE the main parallel execution (sequential, must complete).
+    /// Use for setup tasks like establishing SSH ControlMaster connections.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub pre_commands: Vec<PlannedCommand>,
+
+    /// Main commands to execute (may run in parallel based on `parallel` flag)
     pub commands: Vec<PlannedCommand>,
-    /// Whether to run commands in parallel (overrides CLI --parallel if set)
+
+    /// Commands to run AFTER main execution completes (sequential).
+    /// Use for cleanup tasks.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub post_commands: Vec<PlannedCommand>,
+
+    /// Whether to run main commands in parallel (overrides CLI --parallel if set)
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub parallel: Option<bool>,
 }
@@ -125,8 +137,10 @@ pub struct PlanResponse {
 
 /// The result of a plugin command execution.
 pub enum CommandResult {
-    /// A plan of commands to execute via loop_lib
+    /// A plan of commands to execute via loop_lib (simple form, no pre/post commands)
     Plan(Vec<PlannedCommand>, Option<bool>),
+    /// A full execution plan with pre/post commands
+    FullPlan(ExecutionPlan),
     /// A message to display (no commands to execute)
     Message(String),
     /// An error occurred
@@ -141,8 +155,23 @@ pub enum CommandResult {
 
 /// Serialize and print an execution plan to stdout.
 pub fn output_execution_plan(commands: Vec<PlannedCommand>, parallel: Option<bool>) {
+    output_execution_plan_full(vec![], commands, vec![], parallel);
+}
+
+/// Serialize and print a full execution plan with pre/post commands to stdout.
+pub fn output_execution_plan_full(
+    pre_commands: Vec<PlannedCommand>,
+    commands: Vec<PlannedCommand>,
+    post_commands: Vec<PlannedCommand>,
+    parallel: Option<bool>,
+) {
     let response = PlanResponse {
-        plan: ExecutionPlan { commands, parallel },
+        plan: ExecutionPlan {
+            pre_commands,
+            commands,
+            post_commands,
+            parallel,
+        },
     };
     println!("{}", serde_json::to_string(&response).unwrap());
 }
@@ -235,6 +264,10 @@ pub fn run_plugin(plugin: PluginDefinition) {
             match (plugin.execute)(request) {
                 CommandResult::Plan(commands, parallel) => {
                     output_execution_plan(commands, parallel);
+                }
+                CommandResult::FullPlan(plan) => {
+                    let response = PlanResponse { plan };
+                    println!("{}", serde_json::to_string(&response).unwrap());
                 }
                 CommandResult::Message(msg) => {
                     if !msg.is_empty() {
