@@ -239,7 +239,12 @@ pub struct PluginDefinition {
 ///
 /// This replaces the boilerplate main() function in each plugin binary.
 /// Plugins only need to define their `PluginInfo` and an execute function.
+///
+/// Initializes `env_logger` so plugins can use `log` macros with RUST_LOG.
 pub fn run_plugin(plugin: PluginDefinition) {
+    // Initialize logger for subprocess - inherits RUST_LOG from parent
+    env_logger::init();
+
     let args: Vec<String> = std::env::args().collect();
 
     if args.len() < 2 {
