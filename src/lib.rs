@@ -201,24 +201,24 @@ fn write_plugin_help(info: &PluginInfo, w: &mut dyn std::io::Write) {
         if !help.commands.is_empty() {
             let _ = writeln!(w, "Commands:");
             for (cmd, desc) in &help.commands {
-                let _ = writeln!(w, "  {:<20} {}", cmd, desc);
+                let _ = writeln!(w, "  {cmd:<20} {desc}");
             }
             let _ = writeln!(w);
         }
         if !help.examples.is_empty() {
             let _ = writeln!(w, "Examples:");
             for ex in &help.examples {
-                let _ = writeln!(w, "  {}", ex);
+                let _ = writeln!(w, "  {ex}");
             }
             let _ = writeln!(w);
         }
         if let Some(note) = &help.note {
-            let _ = writeln!(w, "{}", note);
+            let _ = writeln!(w, "{note}");
         }
     } else {
         let _ = writeln!(w, "meta {} v{}", info.name, info.version);
         if let Some(desc) = &info.description {
-            let _ = writeln!(w, "{}", desc);
+            let _ = writeln!(w, "{desc}");
         }
     }
 }
@@ -257,14 +257,17 @@ pub fn run_plugin(plugin: PluginDefinition) {
     let args: Vec<String> = std::env::args().collect();
 
     if args.len() < 2 {
-        eprintln!("This binary is a meta plugin. Use via: meta {}", plugin.info.name);
+        eprintln!(
+            "This binary is a meta plugin. Use via: meta {}",
+            plugin.info.name
+        );
         std::process::exit(1);
     }
 
     match args[1].as_str() {
         "--meta-plugin-info" => {
             let json = serde_json::to_string_pretty(&plugin.info).unwrap();
-            println!("{}", json);
+            println!("{json}");
         }
         "--meta-plugin-exec" => {
             let request = match read_request_from_stdin() {
@@ -285,16 +288,16 @@ pub fn run_plugin(plugin: PluginDefinition) {
                 }
                 CommandResult::Message(msg) => {
                     if !msg.is_empty() {
-                        println!("{}", msg);
+                        println!("{msg}");
                     }
                 }
                 CommandResult::Error(e) => {
-                    eprintln!("Error: {}", e);
+                    eprintln!("Error: {e}");
                     std::process::exit(1);
                 }
                 CommandResult::ShowHelp(maybe_error) => {
                     if let Some(ref err) = maybe_error {
-                        eprintln!("error: {}", err);
+                        eprintln!("error: {err}");
                         eprintln!();
                         // Print help to stderr when there's an error (so it's visible even if meta captures stdout)
                         eprint_plugin_help(&plugin.info);
