@@ -38,6 +38,10 @@ pub struct PluginHelp {
     /// Uses IndexMap to preserve insertion order for consistent help output
     #[serde(default)]
     pub commands: IndexMap<String, String>,
+    /// Categorized commands (section title -> commands map)
+    /// When present and non-empty, commands are displayed by section instead of flat list
+    #[serde(default)]
+    pub command_sections: IndexMap<String, IndexMap<String, String>>,
     /// Example usage strings
     #[serde(default)]
     pub examples: Vec<String>,
@@ -200,13 +204,24 @@ fn write_plugin_help(info: &PluginInfo, w: &mut dyn std::io::Write) {
     if let Some(help) = &info.help {
         let _ = writeln!(w, "{}", help.usage);
         let _ = writeln!(w);
-        if !help.commands.is_empty() {
+
+        // Use command_sections if present, otherwise fall back to flat commands
+        if !help.command_sections.is_empty() {
+            for (section_title, commands) in &help.command_sections {
+                let _ = writeln!(w, "{section_title}:");
+                for (cmd, desc) in commands {
+                    let _ = writeln!(w, "  {cmd:<20} {desc}");
+                }
+                let _ = writeln!(w);
+            }
+        } else if !help.commands.is_empty() {
             let _ = writeln!(w, "Commands:");
             for (cmd, desc) in &help.commands {
                 let _ = writeln!(w, "  {cmd:<20} {desc}");
             }
             let _ = writeln!(w);
         }
+
         if !help.examples.is_empty() {
             let _ = writeln!(w, "Examples:");
             for ex in &help.examples {
