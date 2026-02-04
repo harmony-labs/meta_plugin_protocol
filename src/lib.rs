@@ -8,6 +8,7 @@
 //! 2. Host invokes plugins via `--meta-plugin-exec` (sends `PluginRequest` JSON on stdin)
 //! 3. Plugin responds with either a `PlanResponse` JSON (commands to execute) or direct output
 
+use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::io::Read;
@@ -34,8 +35,9 @@ pub struct PluginHelp {
     /// Usage string (e.g., "meta git <command> [args...]")
     pub usage: String,
     /// Command descriptions (command name -> description)
+    /// Uses IndexMap to preserve insertion order for consistent help output
     #[serde(default)]
-    pub commands: HashMap<String, String>,
+    pub commands: IndexMap<String, String>,
     /// Example usage strings
     #[serde(default)]
     pub examples: Vec<String>,
@@ -304,6 +306,7 @@ pub fn run_plugin(plugin: PluginDefinition) {
                         std::process::exit(1);
                     } else {
                         print_plugin_help(&plugin.info);
+                        std::process::exit(0);
                     }
                 }
             }
