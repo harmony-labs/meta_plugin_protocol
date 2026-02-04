@@ -124,6 +124,12 @@ pub struct ExecutionPlan {
     /// run at most this many commands simultaneously.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub max_parallel: Option<usize>,
+
+    /// Milliseconds to wait between spawning parallel commands.
+    /// Use to spread out initial connection bursts and prevent SSH ControlMaster
+    /// socket saturation. A value of 25ms with 13 repos spreads spawns over ~325ms.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub spawn_stagger_ms: Option<u64>,
 }
 
 /// A single command to be executed by the host via loop_lib.
@@ -168,7 +174,7 @@ pub enum CommandResult {
 
 /// Serialize and print an execution plan to stdout.
 pub fn output_execution_plan(commands: Vec<PlannedCommand>, parallel: Option<bool>) {
-    output_execution_plan_full(vec![], commands, vec![], parallel, None);
+    output_execution_plan_full(vec![], commands, vec![], parallel, None, None);
 }
 
 /// Serialize and print a full execution plan with pre/post commands to stdout.
@@ -178,6 +184,7 @@ pub fn output_execution_plan_full(
     post_commands: Vec<PlannedCommand>,
     parallel: Option<bool>,
     max_parallel: Option<usize>,
+    spawn_stagger_ms: Option<u64>,
 ) {
     let response = PlanResponse {
         plan: ExecutionPlan {
@@ -186,6 +193,7 @@ pub fn output_execution_plan_full(
             post_commands,
             parallel,
             max_parallel,
+            spawn_stagger_ms,
         },
     };
     println!("{}", serde_json::to_string(&response).unwrap());
