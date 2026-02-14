@@ -20,14 +20,34 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          path: meta_plugin_protocol
+
+      - name: Create workspace Cargo.toml
+        shell: bash
+        run: |
+          cat > Cargo.toml << 'EOF'
+          [workspace]
+          members = ["meta_plugin_protocol"]
+          resolver = "2"
+
+          [workspace.package]
+          version = "0.1.0"
+          edition = "2021"
+          license = "MIT"
+          repository = "https://github.com/harmony-labs/meta"
+          EOF
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
 
       - name: Cache Rust
         uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: meta_plugin_protocol
 
       - name: Run tests
+        working-directory: meta_plugin_protocol
         run: cargo test --all-features
 
   clippy:
@@ -36,6 +56,22 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          path: meta_plugin_protocol
+
+      - name: Create workspace Cargo.toml
+        run: |
+          cat > Cargo.toml << 'EOF'
+          [workspace]
+          members = ["meta_plugin_protocol"]
+          resolver = "2"
+
+          [workspace.package]
+          version = "0.1.0"
+          edition = "2021"
+          license = "MIT"
+          repository = "https://github.com/harmony-labs/meta"
+          EOF
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
@@ -44,8 +80,11 @@ jobs:
 
       - name: Cache Rust
         uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: meta_plugin_protocol
 
       - name: Run clippy
+        working-directory: meta_plugin_protocol
         run: cargo clippy --all-targets --all-features -- -D warnings
 
   format:
@@ -54,6 +93,22 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          path: meta_plugin_protocol
+
+      - name: Create workspace Cargo.toml
+        run: |
+          cat > Cargo.toml << 'EOF'
+          [workspace]
+          members = ["meta_plugin_protocol"]
+          resolver = "2"
+
+          [workspace.package]
+          version = "0.1.0"
+          edition = "2021"
+          license = "MIT"
+          repository = "https://github.com/harmony-labs/meta"
+          EOF
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
@@ -61,4 +116,5 @@ jobs:
           components: rustfmt
 
       - name: Check formatting
+        working-directory: meta_plugin_protocol
         run: cargo fmt --all -- --check
