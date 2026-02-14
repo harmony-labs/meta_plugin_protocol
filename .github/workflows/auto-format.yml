@@ -27,18 +27,35 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.head_ref || github.ref_name }}
+          path: meta_plugin_protocol
           # Use PAT to trigger downstream workflows; fallback to GITHUB_TOKEN
           token: ${{ secrets.PARENT_REPO_PAT || github.token }}
+
+      - name: Create workspace Cargo.toml
+        run: |
+          cat > Cargo.toml << 'EOF'
+          [workspace]
+          members = ["meta_plugin_protocol"]
+          resolver = "2"
+
+          [workspace.package]
+          version = "0.1.0"
+          edition = "2021"
+          license = "MIT"
+          repository = "https://github.com/harmony-labs/meta"
+          EOF
 
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt
 
       - name: Run cargo fmt
+        working-directory: meta_plugin_protocol
         run: cargo fmt --all
 
       - name: Check for changes
         id: changes
+        working-directory: meta_plugin_protocol
         run: |
           if git diff --quiet; then
             echo "formatted=false" >> $GITHUB_OUTPUT
@@ -48,6 +65,7 @@ jobs:
 
       - name: Commit and push
         if: steps.changes.outputs.formatted == 'true'
+        working-directory: meta_plugin_protocol
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
